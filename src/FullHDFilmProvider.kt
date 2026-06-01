@@ -11,53 +11,98 @@ class FullHDFilmProvider : MainAPI() {
     override var lang = "tr"
     override val hasMainPage = true
 
+    companion object {
+        private const val SELECTOR_FILM_ITEMS = "ul.film-listesi li, div.film-box"
+        private const val SELECTOR_TITLE = "h2, h3, .film-isim"
+        private const val SELECTOR_LINK = "a"
+        private const val SELECTOR_POSTER = "img"
+        private const val SELECTOR_PAGE_TITLE = "h1, .film-adi"
+        private const val SELECTOR_PAGE_POSTER = ".poster img, div.film-poster img"
+        private const val SELECTOR_MEDIA = "iframe, source, video"
+        private const val MAIN_PAGE_TITLE = "Son Eklenen Filmler"
+    }
+
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
-        val document = app.get(mainUrl).document
-        val home = ArrayList<HomePageList>()
-        
-        val items = document.select("ul.film-listesi li, div.film-box").mapNotNull {
-            it.toSearchResult()
+        return try {
+            val document = app.get(mainUrl).document
+            val items = document.select(SELECTOR_FILM_ITEMS).mapNotNull { it.toSearchResult() }
+            
+            if (items.isEmpty()) return newHomePageResponse(emptyList(), false)
+            
+            newHomePageResponse(
+                listOf(HomePageList(MAIN_PAGE_TITLE, items)),
+                false
+            )
+        } catch (e: Exception) {
+            logError(e)
+            null
         }
-        if (items.isNotEmpty()) {
-            home.add(HomePageList("Son Eklenen Filmler", items))
-        }
-        return newHomePageResponse(home, false)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val searchUrl = "$mainUrl/?s=$query"
-        val document = app.get(searchUrl).document
-        
-        return document.select("ul.film-listesi li, div.film-box").mapNotNull {
-            it.toSearchResult()
+        return try {
+            if (query.isBlank()) return emptyList()
+            
+            val searchUrl = "$mainUrl/?s=${query.trim()}"
+            val document = app.get(searchUrl).document
+            
+            document.select(SELECTOR_FILM_ITEMS).mapNotNull { it.toSearchResult() }
+        } catch (e: Exception) {
+            logError(e)
+            emptyList()
         }
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst("h2, h3, .film-isim")?.text() ?: return null
-        val href = this.selectFirst("a")?.attr("href") ?: return null
-        val posterUrl = this.selectFirst("img")?.attr("src")
+        return try {
+            val title = this.selectFirst(SELECTOR_TITLE)?.text()?.trim() ?: return null
+            val href = this.selectFirst(SELECTOR_LINK)?.attr("href")?.trim() 
+                ?: return null
+            
+            if (href.isBlank()) return null
+            
+            val posterUrl = this.selectFirst(SELECTOR_POSTER)?.attr("src")?.trim()
 
-        return newMovieSearchResponse(title, href, TvType.Movie) {
-            this.posterUrl = posterUrl
+            newMovieSearchResponse(title, href, TvType.Movie) {
+                this.posterUrl = posterUrl
+            }
+        } catch (e: Exception) {
+            logError(e)
+            null
         }
     }
 
     override suspend fun load(url: String): LoadResponse? {
-        val document = app.get(url).document
-        val title = document.selectFirst("h1, .film-adi")?.text() ?: return null
-        val poster = document.selectFirst(".poster img, div.film-poster img")?.attr("src")
-        
-        val movieUrlList = ArrayList<String>()
-        document.select("iframe, source, video").forEach {
-            val src = it.attr("src").ifEmpty { it.attr("data-src") }
-            if (src.isNotEmpty()) {
-                movieUrlList.add(src)
-            }
-        }
+        return try {
+            val document = app.get(url).document
+            val title = document.selectFirst(SELECTOR_PAGE_TITLE)?.text()?.trim() 
+                ?: return null
+            val poster = document.selectFirst(SELECTOR_PAGE_POSTER)?.attr("src")?.trim()
+            
+            val movieUrlList = extractMediaUrls(document)
+            
+            if (movieUrlList.isEmpty()) return null
 
-        return newMovieLoadResponse(title, url, TvType.Movie, movieUrlList) {
-            this.posterUrl = poster
+            newMovieLoadResponse(title, url, TvType.Movie, movieUrlList) {
+                this.posterUrl = poster
+            }
+        } catch (e: Exception) {
+            logError(e)
+            null
         }
+    }
+
+    private fun extractMediaUrls(document: org.jsoup.nodes.Document): List<String> {
+        return document.select(SELECTOR_MEDIA)
+            .mapNotNull { element ->
+                (element.attr("src").ifEmpty { element.attr("data-src") })
+                    .trim()
+                    .takeIf { it.isNotEmpty() }
+            }
+            .distinct()
+    }
+
+    private fun logError(exception: Exception) {
+        exception.printStackTrace()
     }
 }
