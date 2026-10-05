@@ -1,58 +1,44 @@
-**⚠️ This is currently under development, dont use it yet if you're not comfortable with constantly merging new changes**
+# Global Academic Network (GAN) — Landing Page
 
-# `Cloudstream3 Plugin Repo Template`
+Single-page marketing site for **Global Academic Network**: private Russian & English
+language training, language consulting and global academic guidance.
 
-Template for a [Cloudstream3](https://github.com/recloudstream) plugin repo
+Built with **Next.js (App Router) + React + Tailwind CSS**, exported as a fully static site.
 
-**⚠️ Make sure you check "Include all branches" when using this template**
+## Development
 
- 
-## Getting started with writing your first plugin
+```bash
+npm install
+npm run dev        # http://localhost:3000
+npm run build      # static output in ./out
+```
 
-This template includes 1 example plugin.
+## Deploying to Render
 
-1. Open the root build.gradle.kts, read the comments and replace all the placeholders
-2. Familiarize yourself with the project structure. Most files are commented
-3. Build or deploy your first plugin using:
-   - Windows: `.\gradlew.bat ExampleProvider:make` or `.\gradlew.bat ExampleProvider:deployWithAdb`
-   - Linux & Mac: `./gradlew ExampleProvider:make` or `./gradlew ExampleProvider:deployWithAdb`
+The repo includes a `render.yaml` blueprint for a **Static Site**:
 
+- Build command: `npm ci && npm run build`
+- Publish directory: `out`
 
-## Granting All Files Access on Newer Android Devices
+In Render: **New → Blueprint** (or **New → Static Site** with the settings above) and select this repo.
 
-For local plugin testing, you need to grant the app "All Files Access" on newer Android devices (Android 11 and above). Here’s how to do it:
+### Optional environment variables
 
-### Using ADB
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_SITE_URL` | Canonical URL used in SEO / Open Graph tags (e.g. a custom domain). Defaults to Render's `RENDER_EXTERNAL_URL`. |
+| `NEXT_PUBLIC_FORM_ENDPOINT` | Form endpoint (e.g. Formspree) that receives contact form submissions. Without it, the form only validates and confirms on the client. |
 
-* `adb shell appops set --uid PACKAGE_NAME MANAGE_EXTERNAL_STORAGE allow`
-* Replace `PACKAGE_NAME` with the name of the package for the Cloudstream3 version you are using:
-   - debug: `com.lagradost.cloudstream3.prerelease.debug`
-   - prerelease: `com.lagradost.cloudstream3.prerelease`
-   - stable: `com.lagradost.cloudstream3`
+## Structure
 
-### Manually
+```
+app/          layout (SEO metadata), page, favicon, OG image, robots, sitemap
+components/   one component per section (Header, Hero, Languages, About, Services, …)
+lib/site.ts   site URL helper
+```
 
-1. **Open Settings**: Go to your device’s Settings menu.
+## Content notes
 
-2. **Navigate to Special Access**:
-   - Tap on "Apps & notifications" or "Apps".
-   - Select "Special app access" or "Special access".
-
-3. **Select All Files Access**:
-   - Tap on "All files access".
-   - It may be under the three vertical dots menu towards the top of the screen.
-
-4. **Grant Access to the App**: Find the app in the list and tap on it to toggle it, if it is not already enabled.
-
-6. **Restart the App**: Close and reopen the app to apply the changes.
-
-
-## License
-
-Everything in this repo is released into the public domain. You may use it however you want with no conditions whatsoever
-
-
-## Attribution
-
-This template as well as the gradle plugin and the whole plugin system is **heavily** based on [Aliucord](https://github.com/Aliucord).
-*Go use it, it's a great mobile discord client mod!*
+The site intentionally contains no invented statistics, testimonials, partner
+universities or student counts. Social links and legal pages in the footer are
+placeholders (`#`) until the real URLs are available.
